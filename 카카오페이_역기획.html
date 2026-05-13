@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>카카오페이 분석 리서치 가이드</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --kakao-yellow: #FEE500;
+    --kakao-brown: #3C1E1E;
+    --kakao-soft: #FFF9C4;
+    --bg: #FAFAF7;
+    --bg-card: #FFFFFF;
+    --text-1: #1A1A1A;
+    --text-2: #4A4A4A;
+    --text-3: #888888;
+    --line: #ECECE8;
+    --accent: #FF6B35;
+    --tag-bg: #F4F1EA;
+    --status-wait: #D0D0CD;
+    --status-progress: #FFB400;
+    --status-done: #2E9E5B;
+  }
+  html, body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text-1);
+    line-height: 1.7;
+    letter-spacing: -0.01em;
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+
+  aside.sidebar {
+    background: var(--kakao-brown); color: #fff;
+    padding: 36px 24px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 24px; padding-bottom: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  .brand-logo {
+    width: 36px; height: 36px;
+    background: var(--kakao-yellow); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: var(--kakao-brown); font-size: 18px;
+  }
+  .brand-text { font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .brand-text small { display: block; font-size: 11px; opacity: 0.6; font-weight: 400; margin-top: 2px; }
+
+  .sidebar-progress {
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 14px;
+    margin-bottom: 24px;
+  }
+  .sidebar-progress .label {
+    font-size: 11px; opacity: 0.6;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .sidebar-progress .count {
+    font-size: 22px; font-weight: 800;
+    color: var(--kakao-yellow); line-height: 1.2;
+  }
+  .sidebar-progress .count small {
+    font-size: 13px; opacity: 0.5; font-weight: 500; color: #fff;
+  }
+  .bar {
+    margin-top: 10px; height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px; overflow: hidden;
+  }
+  .bar > div { height: 100%; background: var(--kakao-yellow); width: 0%; transition: width .3s; }
+
+  nav ul { list-style: none; }
+  nav li { margin-bottom: 4px; }
+  nav a {
+    display: block; padding: 9px 12px;
+    color: rgba(255,255,255,0.7); text-decoration: none;
+    font-size: 13.5px; border-radius: 8px;
+    transition: all .2s; font-weight: 500;
+  }
+  nav a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  nav a.section-label {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; opacity: 0.4;
+    margin-top: 22px; padding-left: 12px;
+    pointer-events: none;
+  }
+
+  main { padding: 56px 64px 80px; max-width: 1080px; }
+
+  .toolbar {
+    position: sticky; top: 12px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 14px; padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 28px; z-index: 50;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .toolbar .save-status {
+    font-size: 12.5px; color: var(--text-3);
+    display: flex; align-items: center; gap: 6px;
+    margin-right: auto;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--status-done); }
+  .toolbar button {
+    border: 1px solid var(--line); background: #fff;
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 600; color: var(--text-2);
+    cursor: pointer; font-family: inherit;
+    transition: all .15s;
+  }
+  .toolbar button:hover { background: var(--bg); border-color: #D8D8D2; }
+  .toolbar button.danger { color: #C03A2A; }
+
+  .edit-hint {
+    background: #FFF8D9; color: var(--kakao-brown);
+    border: 1px solid #FFEC80; border-radius: 12px;
+    padding: 12px 16px; font-size: 13px;
+    margin-bottom: 28px; font-weight: 500;
+  }
+
+  [contenteditable="true"] {
+    outline: none; border-radius: 4px;
+    padding: 1px 3px;
+    transition: background .15s, box-shadow .15s;
+    cursor: text;
+  }
+  [contenteditable="true"]:hover { background: rgba(254, 229, 0, 0.18); }
+  [contenteditable="true"]:focus {
+    background: rgba(254, 229, 0, 0.28);
+    box-shadow: 0 0 0 2px rgba(254, 229, 0, 0.45);
+  }
+
+  .hero {
+    background: linear-gradient(135deg, var(--kakao-yellow) 0%, #FFD400 100%);
+    border-radius: 20px; padding: 48px 44px;
+    margin-bottom: 36px; position: relative; overflow: hidden;
+  }
+  .hero::after {
+    content: '💳'; position: absolute;
+    right: -20px; bottom: -40px;
+    font-size: 220px; opacity: 0.12;
+  }
+  .hero .tag {
+    display: inline-block;
+    background: var(--kakao-brown); color: var(--kakao-yellow);
+    font-size: 11px; padding: 5px 12px;
+    border-radius: 20px; font-weight: 700;
+    letter-spacing: 0.05em; margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 38px; font-weight: 800;
+    color: var(--kakao-brown); line-height: 1.25;
+    margin-bottom: 12px; letter-spacing: -0.03em;
+  }
+  .hero p {
+    font-size: 16px; color: var(--kakao-brown);
+    opacity: 0.78; max-width: 680px; font-weight: 500;
+  }
+
+  section { margin-bottom: 56px; scroll-margin-top: 80px; }
+  .section-header {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 24px; padding-bottom: 16px;
+    border-bottom: 2px solid var(--text-1);
+  }
+  .section-num {
+    font-size: 13px; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.1em;
+  }
+  .section-header h2 {
+    font-size: 26px; font-weight: 800;
+    color: var(--text-1); letter-spacing: -0.02em;
+  }
+  .section-desc { color: var(--text-2); margin-bottom: 24px; font-size: 15px; }
+
+  .purpose-box {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 32px 36px; margin-bottom: 24px;
+  }
+  .purpose-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 14px; color: var(--text-1); }
+  .purpose-box p { color: var(--text-2); font-size: 15px; }
+
+  .core-questions {
+    background: linear-gradient(180deg, #FFFBE8 0%, #FFF7D1 100%);
+    border-radius: 16px; padding: 28px 32px;
+    border-left: 4px solid var(--kakao-yellow);
+  }
+  .core-questions h4 {
+    font-size: 13px; color: var(--kakao-brown);
+    letter-spacing: 0.05em; font-weight: 700;
+    margin-bottom: 14px; text-transform: uppercase;
+  }
+  .core-questions ol { padding-left: 22px; }
+  .core-questions li {
+    color: var(--kakao-brown); margin-bottom: 8px;
+    font-weight: 500; font-size: 14.5px;
+  }
+
+  .axis-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .axis-card {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 24px 22px; transition: all .2s;
+  }
+  .axis-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+  .axis-card .axis-num { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .axis-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .axis-card p { color: var(--text-2); font-size: 13.5px; }
+
+  .topic-list { display: grid; gap: 10px; }
+  .topic-row {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 24px;
+    display: grid; grid-template-columns: 56px 240px 1fr;
+    align-items: center; gap: 20px; transition: all .2s;
+  }
+  .topic-row:hover { border-color: var(--kakao-yellow); background: #FFFEF7; }
+  .topic-row .num {
+    width: 36px; height: 36px;
+    background: var(--kakao-yellow); color: var(--kakao-brown);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px;
+  }
+  .topic-row .title { font-weight: 700; font-size: 15px; }
+  .topic-row .desc { color: var(--text-3); font-size: 13.5px; }
+
+  .team-callout {
+    background: #FFF4E5; border: 1px solid #FFD9A8;
+    border-radius: 14px; padding: 22px 28px; margin-bottom: 28px;
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+  .team-callout .icon {
+    width: 36px; height: 36px;
+    background: var(--accent); color: #fff;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; flex-shrink: 0;
+  }
+  .team-callout h4 { font-size: 15px; margin-bottom: 4px; font-weight: 700; color: #8B3A00; }
+  .team-callout p { font-size: 13.5px; color: #8B3A00; line-height: 1.65; }
+
+  .team-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .team-card {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 24px 26px;
+    transition: all .25s; position: relative;
+  }
+  .team-card:hover {
+    box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+    border-color: var(--kakao-yellow);
+  }
+  .team-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .team-badge {
+    width: 32px; height: 32px;
+    background: var(--kakao-brown); color: var(--kakao-yellow);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; flex-shrink: 0;
+  }
+  .team-card h3 { font-size: 16px; font-weight: 700; }
+
+  .member-meta {
+    background: #FAF9F4; border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+    display: grid; grid-template-columns: 1fr 90px 130px;
+    gap: 8px; align-items: center;
+  }
+  .member-meta input[type="text"],
+  .member-meta input[type="date"],
+  .member-meta select {
+    border: 1px solid #E2E0D8; background: #fff;
+    padding: 7px 10px; font-size: 13px;
+    border-radius: 7px; font-family: inherit;
+    color: var(--text-1); width: 100%;
+    transition: border-color .15s;
+  }
+  .member-meta input:focus, .member-meta select:focus {
+    outline: none; border-color: var(--kakao-yellow);
+    box-shadow: 0 0 0 3px rgba(254, 229, 0, 0.25);
+  }
+  .member-meta input[type="text"]::placeholder { color: #B8B8B0; }
+  .member-meta select { cursor: pointer; font-weight: 600; }
+  .member-meta select.wait { color: var(--text-3); }
+  .member-meta select.progress { color: #B07A00; background: #FFF5D5; border-color: #FFE08A; }
+  .member-meta select.done { color: var(--status-done); background: #E6F4EC; border-color: #B5DDC5; }
+
+  .team-card .role-tag {
+    display: inline-block;
+    background: #FFF8D9; color: var(--kakao-brown);
+    font-size: 12px; padding: 4px 10px;
+    border-radius: 14px; margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .team-card .topics { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .team-card .topics span {
+    background: var(--tag-bg); color: var(--text-2);
+    font-size: 11.5px; padding: 3px 9px;
+    border-radius: 10px; font-weight: 500;
+  }
+  .team-card h5 {
+    font-size: 12px; color: var(--text-3);
+    font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; margin: 14px 0 6px;
+  }
+  .team-card ul { list-style: none; padding: 0; }
+  .team-card ul li {
+    font-size: 13.5px; color: var(--text-2);
+    padding: 3px 0 3px 14px; position: relative;
+  }
+  .team-card ul li::before {
+    content: '·'; position: absolute; left: 4px;
+    color: var(--kakao-yellow); font-weight: 800;
+  }
+  .perspective {
+    background: var(--kakao-soft); border-radius: 10px;
+    padding: 12px 14px; margin-top: 14px;
+    font-size: 13px; color: var(--kakao-brown);
+    font-style: italic; line-height: 1.55;
+  }
+  .perspective::before { content: '💡 '; font-style: normal; }
+
+  .member-memo {
+    margin-top: 14px; width: 100%;
+    border: 1px dashed #D8D8D2; background: #FCFBF7;
+    border-radius: 8px; padding: 10px 12px;
+    font-family: inherit; font-size: 13px;
+    color: var(--text-2); resize: vertical;
+    min-height: 60px; transition: all .15s;
+  }
+  .member-memo:focus {
+    outline: none; border-style: solid;
+    border-color: var(--kakao-yellow); background: #fff;
+  }
+  .member-memo::placeholder { color: #B8B8B0; }
+
+  table.standard {
+    width: 100%; border-collapse: collapse;
+    background: var(--bg-card); border-radius: 14px;
+    overflow: hidden; border: 1px solid var(--line);
+  }
+  table.standard th, table.standard td {
+    padding: 14px 20px; text-align: left;
+    border-bottom: 1px solid var(--line); font-size: 14px;
+  }
+  table.standard th {
+    background: #FAFAF7; color: var(--text-1);
+    font-weight: 700; font-size: 13px;
+    letter-spacing: 0.02em; width: 160px;
+  }
+  table.standard tr:last-child td, table.standard tr:last-child th { border-bottom: none; }
+  table.standard td { color: var(--text-2); }
+
+  .sources { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .source-card {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px 22px;
+  }
+  .source-card h4 { font-size: 14px; color: var(--accent); margin-bottom: 10px; font-weight: 700; }
+  .source-card ul { list-style: none; }
+  .source-card ul li { font-size: 13.5px; color: var(--text-2); padding: 2px 0; }
+  .source-card ul li::before { content: '— '; color: var(--text-3); }
+  .source-card p { font-size: 13.5px; color: var(--text-2); }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .step-card {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-left: 4px solid var(--kakao-yellow);
+    border-radius: 12px; padding: 22px 24px;
+  }
+  .step-card .step-tag {
+    font-size: 11px; color: var(--accent);
+    font-weight: 700; letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .step-card h4 { font-size: 16px; margin-bottom: 10px; font-weight: 700; }
+  .step-card ul { list-style: none; }
+  .step-card ul li {
+    font-size: 13px; color: var(--text-2);
+    padding: 2px 0 2px 12px; position: relative;
+  }
+  .step-card ul li::before {
+    content: '·'; position: absolute; left: 0;
+    color: var(--accent); font-weight: 800;
+  }
+
+  .output-box {
+    background: var(--kakao-brown); color: #fff;
+    border-radius: 16px; padding: 32px 36px;
+  }
+  .output-box .small-tag {
+    display: inline-block;
+    background: var(--kakao-yellow); color: var(--kakao-brown);
+    font-size: 11px; padding: 4px 10px;
+    border-radius: 12px; font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .output-box h3 { font-size: 19px; margin-bottom: 8px; font-weight: 700; }
+  .output-box .strike-line {
+    color: rgba(255,255,255,0.45);
+    text-decoration: line-through;
+    margin-bottom: 4px; font-size: 14px;
+  }
+  .output-box .yes-line {
+    color: var(--kakao-yellow); font-weight: 700;
+    margin-bottom: 16px; font-size: 14.5px;
+  }
+  .output-box ul { list-style: none; }
+  .output-box ul li {
+    font-size: 13.5px; color: rgba(255,255,255,0.85);
+    padding: 3px 0 3px 16px; position: relative;
+  }
+  .output-box ul li::before {
+    content: '✓'; position: absolute; left: 0;
+    color: var(--kakao-yellow); font-weight: 800;
+  }
+  .output-box [contenteditable="true"]:hover { background: rgba(254, 229, 0, 0.18); }
+
+  .final-q { display: grid; gap: 10px; }
+  .final-q-item {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 24px;
+    display: flex; gap: 18px; align-items: center;
+    transition: all .2s;
+  }
+  .final-q-item:hover { border-color: var(--accent); }
+  .final-q-item .q-num {
+    font-size: 22px; font-weight: 800;
+    color: var(--kakao-yellow);
+    -webkit-text-stroke: 1px var(--kakao-brown);
+    min-width: 30px;
+  }
+  .final-q-item .q-text {
+    font-size: 14.5px; color: var(--text-1);
+    font-weight: 500; flex: 1;
+  }
+
+  .closing {
+    text-align: center; padding: 40px 24px;
+    margin-top: 40px; border-radius: 20px;
+    background: linear-gradient(135deg, var(--kakao-yellow) 0%, #FFD400 100%);
+  }
+  .closing p {
+    color: var(--kakao-brown); font-size: 17px;
+    line-height: 1.7; font-weight: 600;
+    max-width: 720px; margin: 0 auto;
+  }
+  .closing strong { font-weight: 800; }
+
+  footer {
+    text-align: center; color: var(--text-3);
+    font-size: 12px; padding: 40px 0 0;
+  }
+
+  /* Research detail cards */
+  .research-detail { display: grid; gap: 20px; }
+  .research-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 30px 32px;
+    transition: all .25s;
+  }
+  .research-card:hover {
+    border-color: var(--kakao-yellow);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+  }
+  .research-card .card-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .research-card .card-num {
+    width: 38px; height: 38px;
+    background: var(--kakao-yellow);
+    color: var(--kakao-brown);
+    border-radius: 12px;
+    font-weight: 800; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .research-card .card-head h3 {
+    font-size: 19px; font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .research-card .card-goal {
+    color: var(--text-2); font-size: 14.5px;
+    padding-bottom: 18px; margin-bottom: 20px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .research-card .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 28px; margin-bottom: 4px;
+  }
+  .research-card .grid-2 + .grid-2 { margin-top: 18px; }
+  .research-card .block h5 {
+    font-size: 11.5px; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px;
+  }
+  .research-card .block ol,
+  .research-card .block ul {
+    list-style: none; padding: 0;
+    counter-reset: rq;
+  }
+  .research-card .block li {
+    font-size: 13.5px; color: var(--text-2);
+    padding: 4px 0 4px 22px; position: relative;
+    line-height: 1.55;
+  }
+  .research-card .block ol li::before {
+    counter-increment: rq;
+    content: "Q" counter(rq);
+    position: absolute; left: 0; top: 4px;
+    font-size: 10.5px; font-weight: 800;
+    color: var(--accent);
+  }
+  .research-card .block ul li::before {
+    content: '·';
+    position: absolute; left: 8px;
+    color: var(--kakao-yellow); font-weight: 800;
+  }
+
+  @media print {
+    aside.sidebar, .toolbar, .edit-hint { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 24px; max-width: none; }
+    .team-card { break-inside: avoid; page-break-inside: avoid; }
+    .hero::after { display: none; }
+  }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+    aside.sidebar { position: relative; height: auto; }
+    main { padding: 32px 24px 60px; }
+    .axis-grid, .team-grid, .sources, .steps { grid-template-columns: 1fr; }
+    .topic-row { grid-template-columns: 50px 1fr; }
+    .topic-row .desc { grid-column: 2; }
+    .hero h1 { font-size: 28px; }
+    .member-meta { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">P</div>
+      <div class="brand-text">
+        카카오페이
+        <small>분석 리서치 가이드</small>
+      </div>
+    </div>
+
+    <div class="sidebar-progress">
+      <div class="label">팀 진행 상황</div>
+      <div class="count"><span id="doneCount">0</span><small> / 6명 완료</small></div>
+      <div class="bar"><div id="progressBar"></div></div>
+    </div>
+
+    <nav>
+      <ul>
+        <li><a class="section-label">리서치 기획</a></li>
+        <li><a href="#purpose">목적</a></li>
+        <li><a href="#direction">리서치 방향</a></li>
+        <li><a href="#topics">전체 구조</a></li>
+        <li><a href="#research-detail">리서치 상세 내용</a></li>
+
+        <li><a class="section-label">팀 운영</a></li>
+        <li><a href="#team-rule">팀 운영 원칙</a></li>
+        <li><a href="#team-roles">6명 역할 분담</a></li>
+
+        <li><a class="section-label">사용자 & 시장</a></li>
+        <li><a href="#user-research">사용자 리서치 방법</a></li>
+        <li><a href="#personas">사용자 페르소나</a></li>
+        <li><a href="#market-opportunity">시장 기회</a></li>
+
+        <li><a class="section-label">기준 & 자료</a></li>
+        <li><a href="#standard">공통 정리 기준</a></li>
+        <li><a href="#sources">참고 자료</a></li>
+        <li><a href="#process">진행 순서</a></li>
+
+        <li><a class="section-label">결과물</a></li>
+        <li><a href="#output">이번 단계 목표</a></li>
+        <li><a href="#final">최종 답해야 할 질문</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <div class="save-status">
+        <span class="dot" id="saveDot"></span>
+        <span id="saveText">모든 내용은 자동 저장돼요</span>
+      </div>
+      <button onclick="window.print()">🖨️ 인쇄 / PDF</button>
+      <button class="danger" onclick="resetAll()">↺ 초기화</button>
+    </div>
+
+    <div class="edit-hint">
+      ✏️ <strong>모든 글자는 클릭해서 바로 수정할 수 있어요.</strong> 팀원 이름·진행 상태·마감일·메모도 입력 가능하고, 변경 즉시 자동 저장됩니다. (브라우저에 저장되며 같은 브라우저에서만 보입니다.)
+    </div>
+
+    <div class="hero">
+      <span class="tag">종합 금융 플랫폼 분석 · 핀테크 리서치</span>
+      <h1 contenteditable="true" data-key="hero-title">카카오페이<br/>분석 리서치 가이드</h1>
+      <p contenteditable="true" data-key="hero-desc">카카오페이는 단순 결제 앱이 아니에요. <strong>결제 · 송금 · 청구서 · 투자 · 보험 · 인증</strong>까지 일상 금융을 통째로 다루는 <strong>‘메신저 기반 종합 금융 플랫폼(슈퍼앱)’</strong>으로 어떻게 작동하고 어디로 가는가를 거꾸로 분석하는 프로젝트예요.</p>
+    </div>
+
+    <!-- 01. 목적 -->
+    <section id="purpose">
+      <div class="section-header">
+        <span class="section-num">01 · 목적</span>
+        <h2>리서치 목적</h2>
+      </div>
+      <div class="purpose-box">
+        <h3 contenteditable="true" data-key="purpose-title">이번 리서치가 답해야 하는 핵심 질문</h3>
+        <p contenteditable="true" data-key="purpose-desc">카카오페이는 사람들의 일상 금융을 통째로 책임지려는 <strong>슈퍼앱</strong>으로 성장 중이에요. “왜 결제·송금부터 시작했는가, 무료처럼 보이는데 어떻게 돈을 버는가, 카카오 안에서 어떤 역할인가, 앞으로 어디로 가는가”를 기존 서비스를 거꾸로 분석해 풀어내요.</p>
+      </div>
+      <div class="core-questions">
+        <h4>핵심 5가지 질문</h4>
+        <ol>
+          <li contenteditable="true" data-key="q1">사람들은 왜 카카오페이를 쓰는가? (결제 / 송금 / 청구서 / 투자 중 어떤 이유로)</li>
+          <li contenteditable="true" data-key="q2">카카오톡 안에서 시작했는데, 왜 별도 앱으로 분리되었는가?</li>
+          <li contenteditable="true" data-key="q3">무료처럼 보이는 서비스로 카카오페이는 어떻게 돈을 버는가?</li>
+          <li contenteditable="true" data-key="q4">토스 · 네이버페이 대비 어떤 점이 다른가?</li>
+          <li contenteditable="true" data-key="q5">단순 결제 회사에서 종합 금융사로 어떻게 진화하고 있는가?</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 02. 방향 -->
+    <section id="direction">
+      <div class="section-header">
+        <span class="section-num">02 · 방향</span>
+        <h2>리서치 핵심 방향</h2>
+      </div>
+      <p class="section-desc">아래 <strong>3개의 축</strong>으로 동시에 진행해요.</p>
+      <div class="axis-grid">
+        <div class="axis-card">
+          <div class="axis-num">축 1</div>
+          <h3 contenteditable="true" data-key="axis1-title">서비스 이해</h3>
+          <p contenteditable="true" data-key="axis1-desc">어떤 문제를 해결하는 종합 금융 플랫폼인가</p>
+        </div>
+        <div class="axis-card">
+          <div class="axis-num">축 2</div>
+          <h3 contenteditable="true" data-key="axis2-title">시장 · 사업</h3>
+          <p contenteditable="true" data-key="axis2-desc">어떻게 돈을 벌고, 핀테크 시장에서 어떤 위치인가</p>
+        </div>
+        <div class="axis-card">
+          <div class="axis-num">축 3</div>
+          <h3 contenteditable="true" data-key="axis3-title">사용자 · 경쟁</h3>
+          <p contenteditable="true" data-key="axis3-desc">사용자는 왜 카카오페이를 선택하는가</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03. 구조 -->
+    <section id="topics">
+      <div class="section-header">
+        <span class="section-num">03 · 구조</span>
+        <h2>전체 리서치 구조</h2>
+      </div>
+      <p class="section-desc">총 <strong>6개 주제</strong>로 나누어 조사해요.</p>
+      <div class="topic-list">
+        <div class="topic-row">
+          <div class="num">1</div>
+          <div class="title" contenteditable="true" data-key="topic1-title">서비스 정체성과 핵심 기능군</div>
+          <div class="desc" contenteditable="true" data-key="topic1-desc">결제 / 송금 / 청구서 / 투자 / 보험 / 인증 — 무엇을 하는 회사인가</div>
+        </div>
+        <div class="topic-row">
+          <div class="num">2</div>
+          <div class="title" contenteditable="true" data-key="topic2-title">시장 환경과 핀테크 흐름</div>
+          <div class="desc" contenteditable="true" data-key="topic2-desc">간편결제 · 디지털금융 · 마이데이터 · 슈퍼앱 흐름</div>
+        </div>
+        <div class="topic-row">
+          <div class="num">3</div>
+          <div class="title" contenteditable="true" data-key="topic3-title">수익 구조</div>
+          <div class="desc" contenteditable="true" data-key="topic3-desc">결제 수수료 · 금융상품 중개 · 광고 · 데이터 활용</div>
+        </div>
+        <div class="topic-row">
+          <div class="num">4</div>
+          <div class="title" contenteditable="true" data-key="topic4-title">경쟁 서비스와 차별점</div>
+          <div class="desc" contenteditable="true" data-key="topic4-desc">토스 · 네이버페이 · 페이코 · 삼성페이 · 애플페이 · 은행 앱</div>
+        </div>
+        <div class="topic-row">
+          <div class="num">5</div>
+          <div class="title" contenteditable="true" data-key="topic5-title">주요 사용자와 사용 패턴</div>
+          <div class="desc" contenteditable="true" data-key="topic5-desc">결제형 · 송금형 · 청구서형 · 투자형 등 사용자별 사용 특성</div>
+        </div>
+        <div class="topic-row">
+          <div class="num">6</div>
+          <div class="title" contenteditable="true" data-key="topic6-title">핵심 기능과 사용 흐름</div>
+          <div class="desc" contenteditable="true" data-key="topic6-desc">결제 · 송금 · 청구서 · 투자 · 인증 각각의 화면 흐름과 사용 경험</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04. 리서치 상세 -->
+    <section id="research-detail">
+      <div class="section-header">
+        <span class="section-num">04 · 리서치 상세</span>
+        <h2>각 주제별 무엇을 어떻게 조사할까?</h2>
+      </div>
+      <p class="section-desc">6개 주제 각각 <strong>① 목표 ② 핵심 질문 ③ 조사 항목 ④ 정리할 결과물 ⑤ 추천 자료·방법</strong>을 카드로 정리했어요. 모든 항목은 클릭해서 바로 수정할 수 있어요.</p>
+
+      <div class="research-detail">
+
+        <!-- 주제 1 -->
+        <div class="research-card">
+          <div class="card-head">
+            <div class="card-num">1</div>
+            <h3 contenteditable="true" data-key="rd-1-title">서비스 정체성과 핵심 기능군</h3>
+          </div>
+          <p class="card-goal" contenteditable="true" data-key="rd-1-goal">카카오페이가 어떤 회사인지, 어떤 기능군으로 구성되어 있는지 명확히 정의해요.</p>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>🎯 핵심 질문</h5>
+              <ol>
+                <li contenteditable="true" data-key="rd-1-q1">카카오페이는 어떤 회사인가? (한 줄로 정의하면)</li>
+                <li contenteditable="true" data-key="rd-1-q2">핵심 기능은 무엇이며 어떻게 분류되는가?</li>
+                <li contenteditable="true" data-key="rd-1-q3">어떤 기능이 사용자 수·매출에 가장 큰 비중인가?</li>
+                <li contenteditable="true" data-key="rd-1-q4">어떤 기능이 미래 성장 동력인가?</li>
+              </ol>
+            </div>
+            <div class="block">
+              <h5>📋 조사할 항목</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-1-i1">결제 — 오프라인 QR·바코드 / 온라인</li>
+                <li contenteditable="true" data-key="rd-1-i2">송금 — 카톡·계좌·해외</li>
+                <li contenteditable="true" data-key="rd-1-i3">청구서 — 받기·자동결제·정기납부</li>
+                <li contenteditable="true" data-key="rd-1-i4">인증 — 본인인증·간편인증서</li>
+                <li contenteditable="true" data-key="rd-1-i5">멤버십 — 적립·쿠폰·바코드</li>
+                <li contenteditable="true" data-key="rd-1-i6">투자 — 카카오페이증권 연계</li>
+                <li contenteditable="true" data-key="rd-1-i7">보험 — 미니보험·다이렉트보험</li>
+                <li contenteditable="true" data-key="rd-1-i8">대출·자산 — 대출비교·마이데이터·자산조회</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>📦 정리할 결과물</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-1-o1">카카오페이 전체 기능 지도 (마인드맵)</li>
+                <li contenteditable="true" data-key="rd-1-o2">핵심 vs 부가 기능 분류표</li>
+                <li contenteditable="true" data-key="rd-1-o3">한 문장 정체성 정의 (“카카오페이는 ___이다”)</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h5>📚 추천 자료·방법</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-1-s1">카카오페이 공식 사이트 메뉴 분석</li>
+                <li contenteditable="true" data-key="rd-1-s2">앱 직접 사용 (모든 메뉴 클릭해 보기)</li>
+                <li contenteditable="true" data-key="rd-1-s3">IR 자료의 사업부문 설명</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 주제 2 -->
+        <div class="research-card">
+          <div class="card-head">
+            <div class="card-num">2</div>
+            <h3 contenteditable="true" data-key="rd-2-title">시장 환경과 핀테크 흐름</h3>
+          </div>
+          <p class="card-goal" contenteditable="true" data-key="rd-2-goal">카카오페이가 속한 간편결제·핀테크 시장 전체를 이해해요.</p>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>🎯 핵심 질문</h5>
+              <ol>
+                <li contenteditable="true" data-key="rd-2-q1">간편결제 시장 규모와 성장률은?</li>
+                <li contenteditable="true" data-key="rd-2-q2">핀테크 시장의 주요 트렌드는?</li>
+                <li contenteditable="true" data-key="rd-2-q3">‘슈퍼앱’ 트렌드란 무엇이고 왜 일어나는가?</li>
+                <li contenteditable="true" data-key="rd-2-q4">마이데이터·오픈뱅킹은 카카오페이에 어떤 의미인가?</li>
+              </ol>
+            </div>
+            <div class="block">
+              <h5>📋 조사할 항목</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-2-i1">간편결제 시장 규모 (한국은행 발표)</li>
+                <li contenteditable="true" data-key="rd-2-i2">오프라인 vs 온라인 결제 비중 변화</li>
+                <li contenteditable="true" data-key="rd-2-i3">송금 시장 규모와 성장률</li>
+                <li contenteditable="true" data-key="rd-2-i4">디지털금융 트렌드 (마이데이터·BNPL·오픈뱅킹)</li>
+                <li contenteditable="true" data-key="rd-2-i5">슈퍼앱 트렌드 (카카오·네이버·토스 비교)</li>
+                <li contenteditable="true" data-key="rd-2-i6">세대별 금융 사용 행동 변화</li>
+                <li contenteditable="true" data-key="rd-2-i7">핀테크 규제 환경 (금융위·금감원 정책)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>📦 정리할 결과물</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-2-o1">시장 규모 통계표 (최근 3년 추이)</li>
+                <li contenteditable="true" data-key="rd-2-o2">3대 핵심 트렌드 정리</li>
+                <li contenteditable="true" data-key="rd-2-o3">규제 환경 요약</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h5>📚 추천 자료·방법</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-2-s1">한국은행 「전자지급결제 동향」 분기보고서</li>
+                <li contenteditable="true" data-key="rd-2-s2">한국핀테크지원센터 보고서</li>
+                <li contenteditable="true" data-key="rd-2-s3">KPMG·딜로이트·PwC 핀테크 리포트</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 주제 3 -->
+        <div class="research-card">
+          <div class="card-head">
+            <div class="card-num">3</div>
+            <h3 contenteditable="true" data-key="rd-3-title">수익 구조</h3>
+          </div>
+          <p class="card-goal" contenteditable="true" data-key="rd-3-goal">카카오페이가 실제로 어떻게 돈을 버는지 매출 구조를 풀어요.</p>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>🎯 핵심 질문</h5>
+              <ol>
+                <li contenteditable="true" data-key="rd-3-q1">카카오페이의 주요 매출원은 무엇인가?</li>
+                <li contenteditable="true" data-key="rd-3-q2">무료 서비스(송금)는 왜 운영하는가?</li>
+                <li contenteditable="true" data-key="rd-3-q3">어떤 영역에서 가장 큰 수익이 나는가?</li>
+                <li contenteditable="true" data-key="rd-3-q4">미래 성장 동력은 어디에 있는가?</li>
+              </ol>
+            </div>
+            <div class="block">
+              <h5>📋 조사할 항목</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-3-i1">결제 부문 매출 (가맹점 수수료 구조)</li>
+                <li contenteditable="true" data-key="rd-3-i2">금융서비스 매출 (대출·보험·투자 중개 수수료)</li>
+                <li contenteditable="true" data-key="rd-3-i3">기타 매출 (광고·제휴·데이터)</li>
+                <li contenteditable="true" data-key="rd-3-i4">영업이익률 추이 (분기별)</li>
+                <li contenteditable="true" data-key="rd-3-i5">카카오 그룹 내 금융 자회사와의 매출 연결</li>
+                <li contenteditable="true" data-key="rd-3-i6">매출 비중 변화 (최근 3년)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>📦 정리할 결과물</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-3-o1">매출 구조도 (영역별 비중 차트)</li>
+                <li contenteditable="true" data-key="rd-3-o2">분기별 매출 변화 추이</li>
+                <li contenteditable="true" data-key="rd-3-o3">직접 · 간접 · 미래 수익 분류</li>
+                <li contenteditable="true" data-key="rd-3-o4">그룹사 매출 연결도</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h5>📚 추천 자료·방법</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-3-s1">카카오페이 분기 실적 발표 (IR)</li>
+                <li contenteditable="true" data-key="rd-3-s2">사업보고서·증권신고서</li>
+                <li contenteditable="true" data-key="rd-3-s3">증권사 리서치 리포트</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 주제 4 -->
+        <div class="research-card">
+          <div class="card-head">
+            <div class="card-num">4</div>
+            <h3 contenteditable="true" data-key="rd-4-title">경쟁 서비스와 차별점</h3>
+          </div>
+          <p class="card-goal" contenteditable="true" data-key="rd-4-goal">어디서 누구와 싸우고 있고, 왜 이기거나 지는지 이해해요.</p>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>🎯 핵심 질문</h5>
+              <ol>
+                <li contenteditable="true" data-key="rd-4-q1">결제 영역의 경쟁자는 누구인가?</li>
+                <li contenteditable="true" data-key="rd-4-q2">송금 영역의 경쟁자는 누구인가?</li>
+                <li contenteditable="true" data-key="rd-4-q3">금융상품(투자·보험) 영역의 경쟁자는?</li>
+                <li contenteditable="true" data-key="rd-4-q4">각 영역에서 카카오페이의 강점·약점은?</li>
+              </ol>
+            </div>
+            <div class="block">
+              <h5>📋 조사할 항목</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-4-i1">토스 — 사용자 수 · UX · 자산관리 강점</li>
+                <li contenteditable="true" data-key="rd-4-i2">네이버페이 — 쇼핑 적립·사용자 수</li>
+                <li contenteditable="true" data-key="rd-4-i3">페이코 — 모기업·점유율</li>
+                <li contenteditable="true" data-key="rd-4-i4">삼성페이·애플페이 — 단말기 결제·가맹점</li>
+                <li contenteditable="true" data-key="rd-4-i5">은행 앱 (KB페이·신한SOL 등)</li>
+                <li contenteditable="true" data-key="rd-4-i6">카드사 앱</li>
+                <li contenteditable="true" data-key="rd-4-i7">글로벌 — 알리페이·위챗페이·페이팔·Venmo</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>📦 정리할 결과물</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-4-o1">경쟁사 비교표 (기능·사용자수·매출·수수료)</li>
+                <li contenteditable="true" data-key="rd-4-o2">영역별 포지셔닝 맵</li>
+                <li contenteditable="true" data-key="rd-4-o3">차별 포인트 정리</li>
+                <li contenteditable="true" data-key="rd-4-o4">우위 영역 · 열위 영역 구분</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h5>📚 추천 자료·방법</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-4-s1">각 서비스 앱 직접 사용</li>
+                <li contenteditable="true" data-key="rd-4-s2">모바일인덱스·와이즈앱 시장 점유율</li>
+                <li contenteditable="true" data-key="rd-4-s3">사용자 후기 비교</li>
+                <li contenteditable="true" data-key="rd-4-s4">증권사 비교 리포트</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 주제 5 -->
+        <div class="research-card">
+          <div class="card-head">
+            <div class="card-num">5</div>
+            <h3 contenteditable="true" data-key="rd-5-title">주요 사용자와 사용 패턴</h3>
+          </div>
+          <p class="card-goal" contenteditable="true" data-key="rd-5-goal">누가 어떤 기능을 어떻게 쓰는지 사용자 세그먼트별로 정리해요.</p>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>🎯 핵심 질문</h5>
+              <ol>
+                <li contenteditable="true" data-key="rd-5-q1">사용자는 어떤 패턴으로 나뉘는가?</li>
+                <li contenteditable="true" data-key="rd-5-q2">각 세그먼트별 주 사용 기능은?</li>
+                <li contenteditable="true" data-key="rd-5-q3">어떤 사용자가 가장 가치 있는가? (매출 기여)</li>
+                <li contenteditable="true" data-key="rd-5-q4">어떤 세그먼트가 미래 성장 잠재력이 큰가?</li>
+              </ol>
+            </div>
+            <div class="block">
+              <h5>📋 조사할 항목</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-5-i1">결제형 사용자 (오프라인·온라인)</li>
+                <li contenteditable="true" data-key="rd-5-i2">송금형 사용자</li>
+                <li contenteditable="true" data-key="rd-5-i3">청구서형 사용자</li>
+                <li contenteditable="true" data-key="rd-5-i4">투자형 사용자</li>
+                <li contenteditable="true" data-key="rd-5-i5">멀티 사용자 (여러 기능 병행)</li>
+                <li contenteditable="true" data-key="rd-5-i6">세대별 사용 차이 (20-30-40-50대)</li>
+                <li contenteditable="true" data-key="rd-5-i7">사용 빈도 분포 (DAU·MAU)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>📦 정리할 결과물</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-5-o1">사용자 페르소나 4종 (👉 08번 섹션 참고)</li>
+                <li contenteditable="true" data-key="rd-5-o2">세그먼트별 사용 패턴 매트릭스</li>
+                <li contenteditable="true" data-key="rd-5-o3">사용자 여정 (User Journey) 시각화</li>
+                <li contenteditable="true" data-key="rd-5-o4">가치 사용자 세그먼트 정의</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h5>📚 추천 자료·방법</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-5-s1">사용자 인터뷰 8명 이상 (👉 07번 섹션 참고)</li>
+                <li contenteditable="true" data-key="rd-5-s2">설문 100명 이상</li>
+                <li contenteditable="true" data-key="rd-5-s3">앱스토어·커뮤니티 후기 분석</li>
+                <li contenteditable="true" data-key="rd-5-s4">IR 자료의 사용자 통계</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 주제 6 -->
+        <div class="research-card">
+          <div class="card-head">
+            <div class="card-num">6</div>
+            <h3 contenteditable="true" data-key="rd-6-title">핵심 기능과 사용 흐름</h3>
+          </div>
+          <p class="card-goal" contenteditable="true" data-key="rd-6-goal">각 기능이 어떻게 작동하는지 화면별 흐름을 정리해요.</p>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>🎯 핵심 질문</h5>
+              <ol>
+                <li contenteditable="true" data-key="rd-6-q1">각 기능은 어떤 단계로 작동하는가?</li>
+                <li contenteditable="true" data-key="rd-6-q2">어디서 사용이 어렵고, 어디서 매끄러운가?</li>
+                <li contenteditable="true" data-key="rd-6-q3">카카오페이만의 사용 경험 패턴은?</li>
+                <li contenteditable="true" data-key="rd-6-q4">다른 앱과 비교했을 때 좋은 점·나쁜 점은?</li>
+              </ol>
+            </div>
+            <div class="block">
+              <h5>📋 조사할 항목</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-6-i1">오프라인 결제 흐름 (QR·바코드)</li>
+                <li contenteditable="true" data-key="rd-6-i2">온라인 결제 흐름 (간편결제)</li>
+                <li contenteditable="true" data-key="rd-6-i3">송금 흐름 (카톡·계좌)</li>
+                <li contenteditable="true" data-key="rd-6-i4">청구서 받기·자동결제 흐름</li>
+                <li contenteditable="true" data-key="rd-6-i5">투자·보험 가입 흐름</li>
+                <li contenteditable="true" data-key="rd-6-i6">인증·마이데이터 연결 흐름</li>
+                <li contenteditable="true" data-key="rd-6-i7">첫 가입·온보딩 흐름</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="block">
+              <h5>📦 정리할 결과물</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-6-o1">기능별 화면 흐름도 (스크린샷 + 단계 설명)</li>
+                <li contenteditable="true" data-key="rd-6-o2">사용 경험 강점·약점 정리</li>
+                <li contenteditable="true" data-key="rd-6-o3">카카오페이만의 UX 패턴 추출</li>
+                <li contenteditable="true" data-key="rd-6-o4">개선 아이디어</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h5>📚 추천 자료·방법</h5>
+              <ul>
+                <li contenteditable="true" data-key="rd-6-s1">직접 사용 + 화면 캡처</li>
+                <li contenteditable="true" data-key="rd-6-s2">사용자 실제 사용 모습 관찰</li>
+                <li contenteditable="true" data-key="rd-6-s3">경쟁사와 같은 작업 비교</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 05. 팀 운영 원칙 -->
+    <section id="team-rule">
+      <div class="section-header">
+        <span class="section-num">05 · 팀 운영 원칙</span>
+        <h2>팀 운영 방식 (중요)</h2>
+      </div>
+      <div class="team-callout">
+        <div class="icon">!</div>
+        <div>
+          <h4 contenteditable="true" data-key="rule-title">1명 = 1주제가 아니에요</h4>
+          <p contenteditable="true" data-key="rule-desc">카카오페이는 영역이 넓어요. <strong>1명이 최소 2개 이상의 주제를 연결해서</strong> 조사해야 진짜 그림이 보여요. 수익 구조 · 사용자 · 기능 · 시장 · 경쟁이 서로 맞물려 있기 때문이에요.</p>
+        </div>
+      </div>
+      <div class="purpose-box" style="margin-bottom:0;">
+        <h3 contenteditable="true" data-key="rule-why-title">왜 여러 주제를 함께 보는가?</h3>
+        <p contenteditable="true" data-key="rule-why-desc">· 수익 구조는 어떤 사용자가 어떤 기능을 쓰는지 봐야 보이고<br/>
+        · 경쟁 분석은 기능 비교 없이는 의미가 없으며<br/>
+        · 시장 흐름은 카카오의 슈퍼앱 전략과 연결되어야 해석돼요.</p>
+      </div>
+    </section>
+
+    <!-- 05. 팀원 역할 -->
+    <section id="team-roles">
+      <div class="section-header">
+        <span class="section-num">06 · 역할 분담</span>
+        <h2>6명 역할 분담</h2>
+      </div>
+      <p class="section-desc">각 카드 상단에 <strong>이름 · 진행 상태 · 마감일</strong>을 입력하고, 카드 아래 메모란에 자료 링크나 진행 메모를 자유롭게 적을 수 있어요.</p>
+
+      <div class="team-grid">
+
+        <!-- 팀원 1 -->
+        <div class="team-card" data-member="1">
+          <div class="team-head"><div class="team-badge">1</div><h3>팀원 1</h3></div>
+          <div class="member-meta">
+            <input type="text" placeholder="이름 입력" data-key="member-1-name" />
+            <select data-key="member-1-status" class="status-select">
+              <option value="wait">대기</option>
+              <option value="progress">진행중</option>
+              <option value="done">완료</option>
+            </select>
+            <input type="date" data-key="member-1-deadline" />
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="member-1-role">서비스 정체성 + 사용자 사용 맥락</div>
+          <div class="topics"><span>주제 1. 서비스 정체성</span><span>주제 5. 사용 패턴</span></div>
+          <h5>핵심 역할</h5>
+          <p contenteditable="true" data-key="member-1-core" style="font-size:13.5px;color:var(--text-2);">“카카오페이는 무엇이고, 누가 어떻게 쓰는가” 분석</p>
+          <h5>조사 포인트</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-1-p1">카카오페이의 핵심 정체성은 무엇인가 (결제 회사 / 송금 회사 / 종합 금융사)</li>
+            <li contenteditable="true" data-key="member-1-p2">어떤 기능군이 가장 핵심인가 (결제·송금·청구서·투자·보험)</li>
+            <li contenteditable="true" data-key="member-1-p3">사용자가 실제로 가장 자주 쓰는 기능은 무엇인가</li>
+            <li contenteditable="true" data-key="member-1-p4">카카오톡 안의 페이 vs 별도 카카오페이 앱의 사용 차이</li>
+            <li contenteditable="true" data-key="member-1-p5">사용자별 사용 패턴이 어떻게 다른가</li>
+          </ul>
+          <h5>반드시 정리해야 할 것</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-1-o1">카카오페이 기능 지도 (전체 기능 목록 정리)</li>
+            <li contenteditable="true" data-key="member-1-o2">주요 사용 상황 5개 이상</li>
+            <li contenteditable="true" data-key="member-1-o3">기존 금융앱 vs 카카오페이 비교</li>
+            <li contenteditable="true" data-key="member-1-o4">사용자 입장의 정체성 정의 (“카카오페이는 ___이다”)</li>
+          </ul>
+          <div class="perspective" contenteditable="true" data-key="member-1-pers">카카오페이는 결제 앱이 아니라 <strong>일상 금융을 통째로 다루는 슈퍼앱</strong>으로 진화 중이에요</div>
+          <textarea class="member-memo" placeholder="자료 링크 · 진행 메모 · 인터뷰 기록 등" data-key="member-1-memo"></textarea>
+        </div>
+
+        <!-- 팀원 2 -->
+        <div class="team-card" data-member="2">
+          <div class="team-head"><div class="team-badge">2</div><h3>팀원 2</h3></div>
+          <div class="member-meta">
+            <input type="text" placeholder="이름 입력" data-key="member-2-name" />
+            <select data-key="member-2-status" class="status-select">
+              <option value="wait">대기</option>
+              <option value="progress">진행중</option>
+              <option value="done">완료</option>
+            </select>
+            <input type="date" data-key="member-2-deadline" />
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="member-2-role">핵심 기능 + 사용 흐름</div>
+          <div class="topics"><span>주제 6. 화면 흐름</span><span>주제 1. 서비스 정체성</span></div>
+          <h5>핵심 역할</h5>
+          <p contenteditable="true" data-key="member-2-core" style="font-size:13.5px;color:var(--text-2);">“왜 각 기능이 이렇게 쉬워 보이는가” 분석</p>
+          <h5>조사 포인트</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-2-p1">오프라인 결제 흐름 (QR · 바코드) / 온라인 결제 흐름</li>
+            <li contenteditable="true" data-key="member-2-p2">송금 흐름 (카톡 친구 송금 / 계좌 송금)</li>
+            <li contenteditable="true" data-key="member-2-p3">청구서 받기 · 자동 결제 흐름</li>
+            <li contenteditable="true" data-key="member-2-p4">투자 · 금융상품 가입 흐름</li>
+            <li contenteditable="true" data-key="member-2-p5">인증 · 마이데이터 연결 흐름</li>
+          </ul>
+          <h5>반드시 정리해야 할 것</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-2-o1">기능별 사용자 흐름도 (5개 이상)</li>
+            <li contenteditable="true" data-key="member-2-o2">전체 기능 구조도</li>
+            <li contenteditable="true" data-key="member-2-o3">사용 경험의 강점 · 아쉬운 점</li>
+            <li contenteditable="true" data-key="member-2-o4">개선 아이디어</li>
+          </ul>
+          <div class="perspective" contenteditable="true" data-key="member-2-pers">카카오톡이 이미 가진 <strong>친구 목록과 인증 정보</strong>가 어떻게 모든 기능의 불편함을 줄여주는가</div>
+          <textarea class="member-memo" placeholder="화면 캡처 위치 · 흐름도 메모 등" data-key="member-2-memo"></textarea>
+        </div>
+
+        <!-- 팀원 3 -->
+        <div class="team-card" data-member="3">
+          <div class="team-head"><div class="team-badge">3</div><h3>팀원 3</h3></div>
+          <div class="member-meta">
+            <input type="text" placeholder="이름 입력" data-key="member-3-name" />
+            <select data-key="member-3-status" class="status-select">
+              <option value="wait">대기</option>
+              <option value="progress">진행중</option>
+              <option value="done">완료</option>
+            </select>
+            <input type="date" data-key="member-3-deadline" />
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="member-3-role">시장 환경 + 핀테크 흐름</div>
+          <div class="topics"><span>주제 2. 시장 환경</span><span>주제 5. 사용 패턴</span></div>
+          <h5>핵심 역할</h5>
+          <p contenteditable="true" data-key="member-3-core" style="font-size:13.5px;color:var(--text-2);">“왜 간편결제·핀테크 시장이 이렇게 커졌는가” 분석</p>
+          <h5>조사 포인트</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-3-p1">간편결제 시장 성장 (오프라인 · 온라인)</li>
+            <li contenteditable="true" data-key="member-3-p2">모바일 금융 · 디지털금융 확대</li>
+            <li contenteditable="true" data-key="member-3-p3">마이데이터 · 오픈뱅킹 · 후불결제(BNPL) 흐름</li>
+            <li contenteditable="true" data-key="member-3-p4">‘슈퍼앱’ 트렌드 (네이버 · 카카오 · 토스)</li>
+            <li contenteditable="true" data-key="member-3-p5">세대별 금융 사용 행동 변화</li>
+          </ul>
+          <h5>반드시 정리해야 할 것</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-3-o1">시장 규모 자료 / 산업 리포트</li>
+            <li contenteditable="true" data-key="member-3-o2">관련 트렌드 기사 정리</li>
+            <li contenteditable="true" data-key="member-3-o3">사용자 행동 변화 / 일상이 된 금융 흐름</li>
+          </ul>
+          <div class="perspective" contenteditable="true" data-key="member-3-pers">카카오페이는 금융 서비스라기보다 <strong>일상 인프라</strong>로 자리 잡고 있어요</div>
+          <textarea class="member-memo" placeholder="자료 링크 · 통계 인용 등" data-key="member-3-memo"></textarea>
+        </div>
+
+        <!-- 팀원 4 -->
+        <div class="team-card" data-member="4">
+          <div class="team-head"><div class="team-badge">4</div><h3>팀원 4</h3></div>
+          <div class="member-meta">
+            <input type="text" placeholder="이름 입력" data-key="member-4-name" />
+            <select data-key="member-4-status" class="status-select">
+              <option value="wait">대기</option>
+              <option value="progress">진행중</option>
+              <option value="done">완료</option>
+            </select>
+            <input type="date" data-key="member-4-deadline" />
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="member-4-role">수익 구조 + 사업 전략</div>
+          <div class="topics"><span>주제 3. 수익 구조</span><span>주제 2. 시장 환경</span></div>
+          <h5>핵심 역할</h5>
+          <p contenteditable="true" data-key="member-4-core" style="font-size:13.5px;color:var(--text-2);">“무료처럼 보이는데 어떻게 돈을 버는가” 분석</p>
+          <h5>조사 포인트</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-4-p1">결제 수수료 (가맹점에서 받는 수수료)</li>
+            <li contenteditable="true" data-key="member-4-p2">금융상품 중개 수수료 (펀드 · 보험 · 대출)</li>
+            <li contenteditable="true" data-key="member-4-p3">광고 · 제휴 · 데이터 매출</li>
+            <li contenteditable="true" data-key="member-4-p4">카카오뱅크 · 카카오페이증권 · 카카오페이손해보험과의 연결 구조</li>
+            <li contenteditable="true" data-key="member-4-p5">사용자가 카카오에 더 오래 머물게 하는 전략</li>
+          </ul>
+          <h5>반드시 정리해야 할 것</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-4-o1">매출 구조도 (영역별 비중)</li>
+            <li contenteditable="true" data-key="member-4-o2">직접 수익 · 간접 수익 · 미래 수익 구분</li>
+            <li contenteditable="true" data-key="member-4-o3">카카오 그룹 안의 금융 자회사 연결 흐름</li>
+            <li contenteditable="true" data-key="member-4-o4">사업 전략 해석</li>
+          </ul>
+          <div class="perspective" contenteditable="true" data-key="member-4-pers">카카오페이는 결제 회사가 아니라 <strong>금융상품을 팔기 위한 종합 금융 플랫폼</strong>이에요</div>
+          <textarea class="member-memo" placeholder="IR 자료 · 매출 구조 메모 등" data-key="member-4-memo"></textarea>
+        </div>
+
+        <!-- 팀원 5 -->
+        <div class="team-card" data-member="5">
+          <div class="team-head"><div class="team-badge">5</div><h3>팀원 5</h3></div>
+          <div class="member-meta">
+            <input type="text" placeholder="이름 입력" data-key="member-5-name" />
+            <select data-key="member-5-status" class="status-select">
+              <option value="wait">대기</option>
+              <option value="progress">진행중</option>
+              <option value="done">완료</option>
+            </select>
+            <input type="date" data-key="member-5-deadline" />
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="member-5-role">경쟁 서비스 + 차별점</div>
+          <div class="topics"><span>주제 4. 경쟁 · 차별</span><span>주제 6. 화면 흐름</span></div>
+          <h5>핵심 역할</h5>
+          <p contenteditable="true" data-key="member-5-core" style="font-size:13.5px;color:var(--text-2);">“왜 사용자는 카카오페이를 선택하는가” 분석</p>
+          <h5>조사 포인트</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-5-p1">토스 / 네이버페이 / 페이코</li>
+            <li contenteditable="true" data-key="member-5-p2">삼성페이 / 애플페이 (단말기 결제)</li>
+            <li contenteditable="true" data-key="member-5-p3">은행 앱 (KB페이 · 신한SOL 등)</li>
+            <li contenteditable="true" data-key="member-5-p4">사용 경험 · 접근성 · 처음 사용 시 어려움 비교</li>
+            <li contenteditable="true" data-key="member-5-p5">카카오톡 기반의 차별성</li>
+          </ul>
+          <h5>반드시 정리해야 할 것</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-5-o1">경쟁사 비교표 (기능 · 수수료 · 가맹점 · 사용자 수)</li>
+            <li contenteditable="true" data-key="member-5-o2">사용 경험 비교</li>
+            <li contenteditable="true" data-key="member-5-o3">처음 사용하기 어려운 정도 비교</li>
+            <li contenteditable="true" data-key="member-5-o4">차별 포인트 정리</li>
+          </ul>
+          <div class="perspective" contenteditable="true" data-key="member-5-pers">카카오페이의 진짜 무기는 결제가 아니라 <strong>이미 모든 친구가 들어 있는 카카오톡</strong>이에요</div>
+          <textarea class="member-memo" placeholder="경쟁사 캡처 위치 · 비교표 초안 등" data-key="member-5-memo"></textarea>
+        </div>
+
+        <!-- 팀원 6 -->
+        <div class="team-card" data-member="6">
+          <div class="team-head"><div class="team-badge">6</div><h3>팀원 6</h3></div>
+          <div class="member-meta">
+            <input type="text" placeholder="이름 입력" data-key="member-6-name" />
+            <select data-key="member-6-status" class="status-select">
+              <option value="wait">대기</option>
+              <option value="progress">진행중</option>
+              <option value="done">완료</option>
+            </select>
+            <input type="date" data-key="member-6-deadline" />
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="member-6-role">확장 전략 + 미래 시나리오</div>
+          <div class="topics"><span>주제 3. 수익 구조</span><span>주제 4. 경쟁</span><span>주제 5. 사용 패턴</span></div>
+          <h5>핵심 역할</h5>
+          <p contenteditable="true" data-key="member-6-core" style="font-size:13.5px;color:var(--text-2);">“카카오페이는 앞으로 어떤 방향으로 확장될 수 있는가” 분석</p>
+          <h5>조사 포인트</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-6-p1">자산관리 · 웰스테크 (마이데이터 기반 통합 관리)</li>
+            <li contenteditable="true" data-key="member-6-p2">보험 디지털화 · 미니보험 · 후불결제(BNPL)</li>
+            <li contenteditable="true" data-key="member-6-p3">B2B 결제 솔루션 (가맹점·기업 결제)</li>
+            <li contenteditable="true" data-key="member-6-p4">글로벌 결제 · 송금 (해외여행 · 유학생 · 외국인 노동자)</li>
+            <li contenteditable="true" data-key="member-6-p5">앞으로 생길 수 있는 위험 요소 (규제 · 경쟁 · 사용자 이탈)</li>
+          </ul>
+          <h5>반드시 정리해야 할 것</h5>
+          <ul>
+            <li contenteditable="true" data-key="member-6-o1">확장 가능 영역 지도</li>
+            <li contenteditable="true" data-key="member-6-o2">새 수익 모델 가능성</li>
+            <li contenteditable="true" data-key="member-6-o3">미래 시나리오 (3년 / 5년 후)</li>
+            <li contenteditable="true" data-key="member-6-o4">위험 요소 정리</li>
+          </ul>
+          <div class="perspective" contenteditable="true" data-key="member-6-pers">카카오페이는 결국 <strong>한국형 종합 금융 슈퍼앱</strong>으로 진화할 거예요. 알리페이 · 위챗페이의 한국 버전</div>
+          <textarea class="member-memo" placeholder="확장 아이디어 · 글로벌 사례 · 미래 시나리오" data-key="member-6-memo"></textarea>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 06. 사용자 리서치 방법 -->
+    <section id="user-research">
+      <div class="section-header">
+        <span class="section-num">07 · 사용자 리서치</span>
+        <h2>실제 사용자는 어떻게 조사할까?</h2>
+      </div>
+      <p class="section-desc">카카오페이는 기능이 많아서 사용자마다 쓰는 방식이 완전히 달라요. 인터뷰·설문에서 <strong>“어떤 기능을 쓰는지”부터 정확히 분류</strong>해야 의미 있는 결과가 나와요.</p>
+      <div class="sources">
+        <div class="source-card">
+          <h4>방법 1 · 사용자 인터뷰</h4>
+          <p contenteditable="true" data-key="ur-1-desc" style="font-size:13.5px;color:var(--text-2);">사용 패턴이 다른 사람 5~8명을 1:1로 (결제 자주 쓰는 사람·송금형·청구서형·투자형 섞어서). 1명당 30분~1시간.</p>
+        </div>
+        <div class="source-card">
+          <h4>방법 2 · 설문 조사</h4>
+          <p contenteditable="true" data-key="ur-2-desc" style="font-size:13.5px;color:var(--text-2);">구글폼·네이버폼으로 100명 이상. <strong>주 사용 기능 · 사용 빈도 · 다른 앱 병행 여부</strong>를 숫자로 확인.</p>
+        </div>
+        <div class="source-card">
+          <h4>방법 3 · 후기·리뷰 분석</h4>
+          <p contenteditable="true" data-key="ur-3-desc" style="font-size:13.5px;color:var(--text-2);">앱스토어·블로그·커뮤니티 후기 200개 이상을 모아 기능별로 분류. 자주 나오는 단어가 핵심 니즈와 불편한 점.</p>
+        </div>
+        <div class="source-card">
+          <h4>방법 4 · 직접 사용·관찰</h4>
+          <p contenteditable="true" data-key="ur-4-desc" style="font-size:13.5px;color:var(--text-2);">팀원이 실제로 결제 · 송금 · 청구서 · 투자 · 보험 가입까지 직접 시도해 보고, 친구가 쓰는 것을 관찰.</p>
+        </div>
+      </div>
+      <div class="core-questions" style="margin-top:20px;">
+        <h4>인터뷰에서 꼭 물어볼 질문</h4>
+        <ol>
+          <li contenteditable="true" data-key="ur-q1">카카오페이 어떤 기능을 가장 자주 쓰세요? (결제 / 송금 / 청구서 / 투자 / 인증 등)</li>
+          <li contenteditable="true" data-key="ur-q2">처음 카카오페이를 쓰기 시작한 계기는 무엇이었나요?</li>
+          <li contenteditable="true" data-key="ur-q3">토스나 네이버페이 같은 다른 앱과 어떻게 나눠 쓰시나요?</li>
+          <li contenteditable="true" data-key="ur-q4">가장 편한 점과 가장 불편한 점은 무엇인가요?</li>
+          <li contenteditable="true" data-key="ur-q5">카카오페이로 처음 해본 금융 행동이 있나요? (예: 첫 펀드 · 첫 미니보험)</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 07. 사용자 페르소나 -->
+    <section id="personas">
+      <div class="section-header">
+        <span class="section-num">08 · 사용자 페르소나</span>
+        <h2>이 서비스는 누가 쓸까? (가상 사용자)</h2>
+      </div>
+      <p class="section-desc">카카오페이는 한 명이 한 가지 방식으로만 쓰지 않아요. <strong>주 사용 기능별로 4명</strong>을 그려보고, 리서치 후 실제 인물 묘사로 바꿔요.</p>
+      <div class="team-grid">
+
+        <div class="team-card">
+          <div class="team-head">
+            <div class="team-badge">P1</div>
+            <h3 contenteditable="true" data-key="persona-1-name">오프라인 결제 김대리</h3>
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="persona-1-tag">30대 직장인 · 편의점·카페·식당 결제 매일 사용</div>
+          <h5>사용 상황</h5>
+          <p contenteditable="true" data-key="persona-1-situation" style="font-size:13.5px;color:var(--text-2);">출근길 카페, 점심 식당, 편의점에서 QR·바코드로 결제. 카드 등록해서 자동 적립 챙김.</p>
+          <h5>원하는 것 (니즈)</h5>
+          <p contenteditable="true" data-key="persona-1-needs" style="font-size:13.5px;color:var(--text-2);">빠른 결제, 적립·할인 자동 적용, 영수증·지출 내역 자동 정리.</p>
+          <h5>불편한 점</h5>
+          <p contenteditable="true" data-key="persona-1-pain" style="font-size:13.5px;color:var(--text-2);">가맹점 따라 인식이 잘 안 됨, 매장 직원이 사용법을 잘 모르는 경우, 삼성페이가 더 편한 곳도 있음.</p>
+        </div>
+
+        <div class="team-card">
+          <div class="team-head">
+            <div class="team-badge">P2</div>
+            <h3 contenteditable="true" data-key="persona-2-name">공과금·청구서 박엄마</h3>
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="persona-2-tag">40대 맞벌이 · 가족 청구서 총무</div>
+          <h5>사용 상황</h5>
+          <p contenteditable="true" data-key="persona-2-situation" style="font-size:13.5px;color:var(--text-2);">관리비 · 통신비 · 보험료 · 학원비 등 매달 청구서를 카카오페이로 받고 결제. 가족 명의 청구서도 본인이 관리.</p>
+          <h5>원하는 것 (니즈)</h5>
+          <p contenteditable="true" data-key="persona-2-needs" style="font-size:13.5px;color:var(--text-2);">모든 청구서를 한 곳에서, 자동 결제, 가족 명의별 분류, 가계부 자동 정리.</p>
+          <h5>불편한 점</h5>
+          <p contenteditable="true" data-key="persona-2-pain" style="font-size:13.5px;color:var(--text-2);">청구서 안 보내는 기관 있음, 가족 카드와 분리하기 어려움, 지난 청구 내역 검색 불편.</p>
+        </div>
+
+        <div class="team-card">
+          <div class="team-head">
+            <div class="team-badge">P3</div>
+            <h3 contenteditable="true" data-key="persona-3-name">친구 송금·정산 이주임</h3>
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="persona-3-tag">20대 후반 직장인 · 친구·동료 송금 적극파</div>
+          <h5>사용 상황</h5>
+          <p contenteditable="true" data-key="persona-3-situation" style="font-size:13.5px;color:var(--text-2);">단톡방 회식 정산, 친구 모임 비용 분담, 경조사 송금 모두 카톡 안에서 처리.</p>
+          <h5>원하는 것 (니즈)</h5>
+          <p contenteditable="true" data-key="persona-3-needs" style="font-size:13.5px;color:var(--text-2);">계좌번호 안 묻고 보내기, 메시지 보내듯 자연스러운 흐름, 보낸 사람·안 보낸 사람 자동 확인.</p>
+          <h5>불편한 점</h5>
+          <p contenteditable="true" data-key="persona-3-pain" style="font-size:13.5px;color:var(--text-2);">카카오페이 안 가입한 친구는 송금 불가, 한도 제한, 자주 보는 친구일수록 정산 요청이 어색.</p>
+        </div>
+
+        <div class="team-card">
+          <div class="team-head">
+            <div class="team-badge">P4</div>
+            <h3 contenteditable="true" data-key="persona-4-name">투자·금융상품 최팀장</h3>
+          </div>
+          <div class="role-tag" contenteditable="true" data-key="persona-4-tag">30대 후반 · 카카오페이증권·보험 이용</div>
+          <h5>사용 상황</h5>
+          <p contenteditable="true" data-key="persona-4-situation" style="font-size:13.5px;color:var(--text-2);">카카오페이증권으로 펀드·주식, 카카오페이에서 미니보험·대출 비교, 마이데이터로 자산 통합 관리.</p>
+          <h5>원하는 것 (니즈)</h5>
+          <p contenteditable="true" data-key="persona-4-needs" style="font-size:13.5px;color:var(--text-2);">한 앱에서 모든 금융 비교·관리, 카카오 데이터 기반 맞춤 추천, 작은 금액으로 가볍게 시작.</p>
+          <h5>불편한 점</h5>
+          <p contenteditable="true" data-key="persona-4-pain" style="font-size:13.5px;color:var(--text-2);">정보 깊이가 전문 금융 앱보다 얕음, 자산 통합 관리는 토스가 더 잘됨, 상품 선택지가 제한적.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 08. 시장 기회 -->
+    <section id="market-opportunity">
+      <div class="section-header">
+        <span class="section-num">09 · 시장 기회</span>
+        <h2>카카오 밖, 전체 시장에서의 기회</h2>
+      </div>
+      <p class="section-desc">카카오 안에서의 분석만으로는 부족해요. <strong>전체 간편결제·핀테크 시장 규모 · 외부 사용자 행동 · 새로운 시장 기회 · 글로벌 사례</strong>를 함께 봐야 사업적 의미가 보여요.</p>
+
+      <div class="purpose-box">
+        <h3 contenteditable="true" data-key="mo-1-title">1. 간편결제·핀테크 전체 시장 규모와 흐름</h3>
+        <p contenteditable="true" data-key="mo-1-desc">간편결제 시장 규모 (오프라인·온라인 비중), 1인당 결제·송금 횟수, 디지털금융 성장률. <strong>카카오페이·토스·네이버페이 시장 점유율</strong>과 그 외 삼성페이·은행 앱 비중까지 함께 확인.</p>
+      </div>
+
+      <div class="purpose-box">
+        <h3 contenteditable="true" data-key="mo-2-title">2. 카카오페이를 안 쓰는 사용자는 왜 다른 걸 쓸까</h3>
+        <p contenteditable="true" data-key="mo-2-desc"><strong>대안 서비스의 강점</strong>을 분석해서 카카오의 빈틈을 찾기.<br/>
+        · 토스: 더 단순한 UX, 카카오 친구 아니어도 송금 가능, 자산 통합 관리 강점<br/>
+        · 네이버페이: 네이버 쇼핑·웹툰 적립 강력<br/>
+        · 삼성페이·애플페이: 폰만 대면 결제, 가맹점 호환성<br/>
+        · 은행 앱: 자산 통합·예적금·대출 깊이</p>
+      </div>
+
+      <div class="purpose-box">
+        <h3 contenteditable="true" data-key="mo-3-title">3. 새로운 시장 기회 (확장 가능성)</h3>
+        <p contenteditable="true" data-key="mo-3-desc">지금은 일상 결제·송금 중심인데, 아래 영역으로 넓힐 수 있어요.</p>
+        <ul style="margin-top:10px;list-style:none;padding:0;">
+          <li contenteditable="true" data-key="mo-3-1" style="padding:4px 0 4px 14px;color:var(--text-2);font-size:14px;">· <strong>자산관리·웰스테크</strong> — 마이데이터 기반 통합 자산 관리·맞춤 추천</li>
+          <li contenteditable="true" data-key="mo-3-2" style="padding:4px 0 4px 14px;color:var(--text-2);font-size:14px;">· <strong>보험 디지털화</strong> — 미니보험·다이렉트보험·맞춤 보험 추천</li>
+          <li contenteditable="true" data-key="mo-3-3" style="padding:4px 0 4px 14px;color:var(--text-2);font-size:14px;">· <strong>후불결제(BNPL)</strong> — 소액 후불결제, MZ 세대 타깃</li>
+          <li contenteditable="true" data-key="mo-3-4" style="padding:4px 0 4px 14px;color:var(--text-2);font-size:14px;">· <strong>B2B 결제 솔루션</strong> — 가맹점 경영 도구, 기업 비용 결제</li>
+          <li contenteditable="true" data-key="mo-3-5" style="padding:4px 0 4px 14px;color:var(--text-2);font-size:14px;">· <strong>글로벌 결제·송금</strong> — 해외여행 결제, 유학생·외국인 노동자 송금</li>
+          <li contenteditable="true" data-key="mo-3-6" style="padding:4px 0 4px 14px;color:var(--text-2);font-size:14px;">· <strong>디지털 자산·증권 토큰화</strong> — STO, 조각투자 같은 새 자산 영역</li>
+        </ul>
+      </div>
+
+      <div class="purpose-box">
+        <h3 contenteditable="true" data-key="mo-4-title">4. 글로벌·해외 시장 가능성</h3>
+        <p contenteditable="true" data-key="mo-4-desc">카카오톡은 국내 중심이지만, 결제·송금은 글로벌 시장이 훨씬 커요.<br/>
+        · <strong>알리페이·위챗페이(중국)</strong> — 슈퍼앱 모델의 원형, 카카오페이가 따라가는 길<br/>
+        · <strong>페이팔·Stripe(글로벌)</strong> — B2B·온라인 결제 강자<br/>
+        · <strong>Venmo·CashApp(미국)</strong> — 친구 송금 문화 만든 회사<br/>
+        · <strong>동남아 진출</strong> — 인도네시아·베트남 등 핀테크 성장기 시장</p>
+      </div>
+
+      <div class="core-questions">
+        <h4>시장 분석에서 답해야 할 질문</h4>
+        <ol>
+          <li contenteditable="true" data-key="mo-q1">간편결제·핀테크 전체 시장 규모는 얼마이고 어떻게 성장하고 있는가?</li>
+          <li contenteditable="true" data-key="mo-q2">카카오페이 외부 사용자는 왜 다른 서비스를 쓰는가?</li>
+          <li contenteditable="true" data-key="mo-q3">아직 카카오페이가 진입하지 않은 시장은 어디인가?</li>
+          <li contenteditable="true" data-key="mo-q4">어떤 새 기능으로 새 시장을 열 수 있는가?</li>
+          <li contenteditable="true" data-key="mo-q5">알리페이·위챗페이 같은 글로벌 슈퍼앱이 되려면 무엇이 필요한가?</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 09. 공통 정리 기준 -->
+    <section id="standard">
+      <div class="section-header">
+        <span class="section-num">10 · 정리 기준</span>
+        <h2>공통 정리 기준</h2>
+      </div>
+      <p class="section-desc">모든 팀원은 아래 형식으로 정리해요.</p>
+      <table class="standard">
+        <tr><th>조사 주제</th><td contenteditable="true" data-key="std-1">무엇을 조사했는가</td></tr>
+        <tr><th>핵심 질문</th><td contenteditable="true" data-key="std-2">어떤 질문에 답하려는가</td></tr>
+        <tr><th>주요 자료</th><td contenteditable="true" data-key="std-3">기사 / 리포트 / 후기 / 공식 페이지 / IR 자료</td></tr>
+        <tr><th>핵심 발견</th><td contenteditable="true" data-key="std-4">조사로 확인된 사실</td></tr>
+        <tr><th>왜 중요한가</th><td contenteditable="true" data-key="std-5">이 발견이 왜 의미가 있는가</td></tr>
+        <tr><th>연결 포인트</th><td contenteditable="true" data-key="std-6">수익 구조 / 사용 경험 / 사용자 분석과 어떻게 연결되는가</td></tr>
+      </table>
+    </section>
+
+    <!-- 10. 참고 자료 -->
+    <section id="sources">
+      <div class="section-header">
+        <span class="section-num">11 · 참고 자료</span>
+        <h2>추천 참고 자료</h2>
+      </div>
+      <div class="sources">
+        <div class="source-card">
+          <h4>📄 공식 자료</h4>
+          <ul>
+            <li contenteditable="true" data-key="src-1-1">카카오페이 공식 사이트</li>
+            <li contenteditable="true" data-key="src-1-2">카카오페이 IR 자료 (분기 실적 발표)</li>
+            <li contenteditable="true" data-key="src-1-3">카카오뱅크 · 카카오페이증권 · 카카오페이손해보험</li>
+            <li contenteditable="true" data-key="src-1-4">카카오 그룹 IR · 사업보고서</li>
+          </ul>
+        </div>
+        <div class="source-card">
+          <h4>📊 시장 · 산업 자료</h4>
+          <ul>
+            <li contenteditable="true" data-key="src-2-1">한국은행 「전자지급결제 동향」</li>
+            <li contenteditable="true" data-key="src-2-2">금융감독원 · 금융위원회 자료</li>
+            <li contenteditable="true" data-key="src-2-3">한국핀테크지원센터 보고서</li>
+            <li contenteditable="true" data-key="src-2-4">삼정KPMG · Deloitte · PwC 핀테크 리포트</li>
+          </ul>
+        </div>
+        <div class="source-card">
+          <h4>💬 사용자 후기 자료</h4>
+          <ul>
+            <li contenteditable="true" data-key="src-3-1">앱스토어 · 구글플레이 리뷰</li>
+            <li contenteditable="true" data-key="src-3-2">블로그 · 브런치 사용 후기</li>
+            <li contenteditable="true" data-key="src-3-3">뽐뿌 · 클리앙 · 디시 · 에펨코리아 커뮤니티 글</li>
+            <li contenteditable="true" data-key="src-3-4">유튜브 기능 리뷰 영상</li>
+          </ul>
+        </div>
+        <div class="source-card">
+          <h4>⚔️ 경쟁 · 글로벌 서비스</h4>
+          <ul>
+            <li contenteditable="true" data-key="src-4-1">토스 · 네이버페이 · 페이코</li>
+            <li contenteditable="true" data-key="src-4-2">삼성페이 · 애플페이</li>
+            <li contenteditable="true" data-key="src-4-3">KB페이 · 신한SOL 등 은행 앱</li>
+            <li contenteditable="true" data-key="src-4-4">알리페이 · 위챗페이 · 페이팔 · Venmo · Stripe</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. 진행 순서 -->
+    <section id="process">
+      <div class="section-header">
+        <span class="section-num">12 · 진행 순서</span>
+        <h2>리서치 진행 순서</h2>
+      </div>
+      <div class="steps">
+        <div class="step-card">
+          <div class="step-tag">1단계</div>
+          <h4 contenteditable="true" data-key="step-1-title">서비스 이해</h4>
+          <ul>
+            <li contenteditable="true" data-key="step-1-1">실제로 모든 기능 사용해 보기</li>
+            <li contenteditable="true" data-key="step-1-2">기능별 화면 캡처</li>
+            <li contenteditable="true" data-key="step-1-3">사용자 흐름 정리</li>
+            <li contenteditable="true" data-key="step-1-4">기능 지도 작성</li>
+          </ul>
+        </div>
+        <div class="step-card">
+          <div class="step-tag">2단계</div>
+          <h4 contenteditable="true" data-key="step-2-title">시장 · 경쟁 조사</h4>
+          <ul>
+            <li contenteditable="true" data-key="step-2-1">간편결제 시장 규모 조사</li>
+            <li contenteditable="true" data-key="step-2-2">경쟁사 비교</li>
+            <li contenteditable="true" data-key="step-2-3">글로벌 사례 (알리페이 · 위챗페이)</li>
+          </ul>
+        </div>
+        <div class="step-card">
+          <div class="step-tag">3단계</div>
+          <h4 contenteditable="true" data-key="step-3-title">수익 구조·전략 연결</h4>
+          <ul>
+            <li contenteditable="true" data-key="step-3-1">IR 자료로 매출 구조 분석</li>
+            <li contenteditable="true" data-key="step-3-2">카카오 그룹 안의 역할</li>
+            <li contenteditable="true" data-key="step-3-3">앞으로의 확장 시나리오</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12. 산출물 -->
+    <section id="output">
+      <div class="section-header">
+        <span class="section-num">13 · 산출물</span>
+        <h2>이번 단계 목표</h2>
+      </div>
+      <div class="output-box">
+        <span class="small-tag">이번 단계 목표</span>
+        <h3 contenteditable="true" data-key="out-title">최종 결론이 아니라, 다음 단계 분석을 위한 재료 확보</h3>
+        <div class="strike-line" contenteditable="true" data-key="out-no">❌ 최종 결론 도출</div>
+        <div class="yes-line" contenteditable="true" data-key="out-yes">✅ 다음 단계 분석을 위한 재료 확보</div>
+        <ul>
+          <li contenteditable="true" data-key="out-1">카카오페이 전체 기능 지도</li>
+          <li contenteditable="true" data-key="out-2">기능별 사용자 흐름</li>
+          <li contenteditable="true" data-key="out-3">경쟁 서비스 비교표</li>
+          <li contenteditable="true" data-key="out-4">간편결제·핀테크 시장 자료</li>
+          <li contenteditable="true" data-key="out-5">수익 구조 해석 자료</li>
+          <li contenteditable="true" data-key="out-6">사용자 페르소나 4종</li>
+          <li contenteditable="true" data-key="out-7">확장 가능성 아이디어</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 13. 최종 질문 -->
+    <section id="final">
+      <div class="section-header">
+        <span class="section-num">14 · 최종 질문</span>
+        <h2>팀이 답해야 하는 질문</h2>
+      </div>
+      <p class="section-desc">리서치가 끝났을 때 팀 전체가 아래 질문에 답할 수 있어야 해요.</p>
+      <div class="final-q">
+        <div class="final-q-item"><div class="q-num">Q1</div><div class="q-text" contenteditable="true" data-key="fq-1">카카오페이는 어떤 문제를 해결하는 서비스인가?</div></div>
+        <div class="final-q-item"><div class="q-num">Q2</div><div class="q-text" contenteditable="true" data-key="fq-2">왜 카카오톡 안에서 시작했고, 왜 별도 앱으로 분리되었는가?</div></div>
+        <div class="final-q-item"><div class="q-num">Q3</div><div class="q-text" contenteditable="true" data-key="fq-3">사용자는 왜 카카오페이를 반복적으로 사용하는가?</div></div>
+        <div class="final-q-item"><div class="q-num">Q4</div><div class="q-text" contenteditable="true" data-key="fq-4">무료처럼 보이는데 실제 수익원은 무엇인가?</div></div>
+        <div class="final-q-item"><div class="q-num">Q5</div><div class="q-text" contenteditable="true" data-key="fq-5">토스 · 네이버페이 대비 가장 강한 차별점은 무엇인가?</div></div>
+        <div class="final-q-item"><div class="q-num">Q6</div><div class="q-text" contenteditable="true" data-key="fq-6">단순 결제 회사가 아니라 종합 금융사로 어떻게 진화 중인가?</div></div>
+        <div class="final-q-item"><div class="q-num">Q7</div><div class="q-text" contenteditable="true" data-key="fq-7">글로벌 · B2B · 새 영역으로 어떻게 확장될 수 있는가?</div></div>
+      </div>
+    </section>
+
+    <div class="closing">
+      <p contenteditable="true" data-key="closing">이번 리서치는 단순 기능 분석이 아니라,<br/>
+      카카오페이를 <strong>“메신저 기반 종합 금융 슈퍼앱 + 카카오 생태계의 금융 허브 + 한국형 핀테크 플랫폼”</strong> 관점에서 해석하는<br/>
+      <strong>기존 서비스 분석 프로젝트</strong>예요.</p>
+    </div>
+
+    <footer>
+      © 카카오페이 분석 리서치 가이드 · 내용 변경은 자동 저장됩니다
+    </footer>
+  </main>
+</div>
+
+<script>
+  const STORAGE_KEY = 'kakao-pay-research-v1';
+
+  document.querySelectorAll('nav a[href^="#"]').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  let saveTimer = null;
+  function saveAll() {
+    const data = {};
+    document.querySelectorAll('[contenteditable="true"][data-key]').forEach(el => {
+      data[el.dataset.key] = el.innerHTML;
+    });
+    document.querySelectorAll('input[data-key], textarea[data-key], select[data-key]').forEach(el => {
+      data[el.dataset.key] = el.value;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    showSaved();
+    updateProgress();
+    updateStatusColors();
+  }
+  function debouncedSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveAll, 350);
+  }
+  function loadAll() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      document.querySelectorAll('[contenteditable="true"][data-key]').forEach(el => {
+        if (data[el.dataset.key] !== undefined) el.innerHTML = data[el.dataset.key];
+      });
+      document.querySelectorAll('input[data-key], textarea[data-key], select[data-key]').forEach(el => {
+        if (data[el.dataset.key] !== undefined) el.value = data[el.dataset.key];
+      });
+    } catch (e) {
+      console.warn('저장된 데이터를 불러올 수 없어요.', e);
+    }
+  }
+  function showSaved() {
+    const text = document.getElementById('saveText');
+    const dot = document.getElementById('saveDot');
+    text.textContent = '저장됨 · ' + new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    dot.style.background = 'var(--status-done)';
+    clearTimeout(showSaved._t);
+    showSaved._t = setTimeout(() => {
+      text.textContent = '모든 내용은 자동 저장돼요';
+    }, 2500);
+  }
+  function updateProgress() {
+    let done = 0;
+    document.querySelectorAll('.status-select').forEach(sel => {
+      if (sel.value === 'done') done++;
+    });
+    document.getElementById('doneCount').textContent = done;
+    document.getElementById('progressBar').style.width = (done / 6 * 100) + '%';
+  }
+  function updateStatusColors() {
+    document.querySelectorAll('.status-select').forEach(sel => {
+      sel.classList.remove('wait', 'progress', 'done');
+      sel.classList.add(sel.value || 'wait');
+    });
+  }
+  function resetAll() {
+    if (!confirm('모든 입력 내용이 사라지고 초기 상태로 돌아가요. 정말 초기화할까요?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+  document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+    el.addEventListener('input', debouncedSave);
+    el.addEventListener('blur', saveAll);
+  });
+  document.querySelectorAll('input[data-key], textarea[data-key]').forEach(el => {
+    el.addEventListener('input', debouncedSave);
+    el.addEventListener('change', saveAll);
+  });
+  document.querySelectorAll('select[data-key]').forEach(el => {
+    el.addEventListener('change', () => { saveAll(); });
+  });
+  window.addEventListener('beforeunload', saveAll);
+  loadAll();
+  updateStatusColors();
+  updateProgress();
+</script>
+</body>
+</html>
